@@ -29,8 +29,6 @@ const userSchema: Schema<User> = new Schema(
   { timestamps: true }
 );
 
-const User = mongoose.model<User>("User", userSchema);
-
 userSchema.pre<User>("save", async function (next) {
   // only if password is changed or new
   if (!this.isModified("password")) return next();
@@ -44,5 +42,7 @@ userSchema.methods.comparePassword = async function (
 ) {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+const User = mongoose.model<User>("User", userSchema);
 
 export default User;
