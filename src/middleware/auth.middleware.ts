@@ -9,6 +9,7 @@ export const authMiddlewqare = async (
 ) => {
   try {
     const { accessToken } = req.cookies;
+
     if (!accessToken) {
       return res.status(401).json({ message: "Unauthorized user" });
     }
@@ -18,7 +19,8 @@ export const authMiddlewqare = async (
       return res.status(401).json({ message: "Unauthorized user" });
     }
 
-    const user = await User.findById(decodedData._id);
+    const user = await User.findById(decodedData.id);
+
     req.user = user;
     next();
   } catch (error: any) {
