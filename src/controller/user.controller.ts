@@ -5,6 +5,8 @@ import {
   forgotPasswordService,
   resetPasswordService,
   updateProfileService,
+  searchUserService,
+  followUserService,
 } from "../service/user.service";
 
 export const registerController = async (
@@ -90,6 +92,32 @@ export const updateProfileController = async (
       message: "Profile updated successfully",
       data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const searchUserController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const users = await searchUserService(req);
+    res.status(200).json({ succeeded: true, users });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const followUserController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const followUser = await followUserService(req);
+    res.status(200).json({ suceeded: true, message: followUser });
   } catch (error) {
     next(error);
   }

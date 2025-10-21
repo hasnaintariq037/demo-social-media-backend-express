@@ -8,6 +8,7 @@ import {
   uploadToCloudinary,
 } from "../utils/cloudinary.util";
 import { CustomError } from "../utils/customError.utils";
+import mongoose from "mongoose";
 
 export const registerService = async (req: Request) => {
   const { name, email, password } = req.body;
@@ -93,4 +94,61 @@ export const updateProfileService = async (req: Request) => {
 
   await user.save({ validateBeforeSave: false });
   return user;
+};
+
+export const searchUserService = async (req: Request) => {
+  const { name } = req.query;
+  const users = await User.find({ name: { $regex: name, $options: "i" } });
+  return users;
+};
+
+export const followUserService = async (req: Request) => {
+  const targetUserId = req.params.userId;
+
+  if (!req.user) throw new CustomError("Unauthorized", 401);
+
+  // Convert current user ID to ObjectId
+  const currentUserId = new mongoose.Types.ObjectId(req.user._id as string);
+
+  if (currentUserId.equals(targetUserId)) {
+    throw new CustomError("You cannot follow yourself", 400);
+  }
+
+  const targetUser = await User.findById(targetUserId);
+  if (!targetUser) throw new CustomError("Target user not found", 404);
+
+  const currentUser = await User.findById(currentUserId);
+  if (!currentUser) throw new CustomError("Current user not found", 404);
+
+  // Initialize arrays if undefined
+  targetUser.followers = targetUser.followers || [];
+  currentUser.following = currentUser.following || [];
+
+  const alreadyFollowing = targetUser.followers.some((f) =>
+    f.equals(currentUserId)
+  );
+
+  if (alreadyFollowing) {
+    // UNFOLLOW
+    targetUser.followers = targetUser.followers.filter(
+      (f) => !f.equals(currentUserId)
+    );
+    currentUser.following = currentUser.following.filter(
+      (f) => !f.equals(targetUserId)
+    );
+
+    await targetUser.save({ validateBeforeSave: false });
+    await currentUser.save({ validateBeforeSave: false });
+
+    return `You unfollow ${targetUser?.name}`;
+  } else {
+    // FOLLOW
+    targetUser.followers.push(currentUserId);
+    currentUser.following.push(new mongoose.Types.ObjectId(targetUserId));
+
+    await targetUser.save({ validateBeforeSave: false });
+    await currentUser.save({ validateBeforeSave: false });
+
+    return `You follow ${targetUser?.name}`;
+  }
 };

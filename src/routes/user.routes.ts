@@ -7,6 +7,8 @@ import {
   forgotPasswordController,
   resetPasswordController,
   updateProfileController,
+  searchUserController,
+  followUserController,
 } from "../controller/user.controller";
 import { loginSchema, signupSchema } from "../validation/yup.validationSchema";
 import { authMiddlewqare } from "../middleware/auth.middleware";
@@ -31,5 +33,11 @@ router
     upload.single("profilePicture"),
     updateProfileController
   );
+
+router.route("/search-user").get(authMiddlewqare, searchUserController);
+
+router
+  .route("/follow-user/:userId")
+  .post(authMiddlewqare, followUserController);
 
 export default router;
