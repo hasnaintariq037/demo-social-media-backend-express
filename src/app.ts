@@ -1,5 +1,5 @@
-import express from "express";
+import express, { Application } from "express";
 
-const app = express();
+const app: Application = express();
 
 export default app;
