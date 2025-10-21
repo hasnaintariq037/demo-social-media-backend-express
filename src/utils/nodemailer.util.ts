@@ -6,7 +6,11 @@ interface EmailOptions {
   html: string;
 }
 
-export const sendEmail = async ({ to, subject, html }: EmailOptions) => {
+export const sendEmail = async ({
+  to,
+  subject,
+  html,
+}: EmailOptions): Promise<void> => {
   try {
     // Create transporter
     const transporter = nodemailer.createTransport({
