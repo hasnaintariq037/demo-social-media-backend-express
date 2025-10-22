@@ -68,27 +68,29 @@ export const deletePostService = async (req: Request) => {
 export const getPostsService = async (req: Request) => {
   const { isMostLikedPosts, isFollowingPosts, isMostSharedPosts } = req.query;
 
+  if (!req.user) throw new CustomError("Unauthorized", 401);
+
   let posts;
 
-  if (!req.user) {
-    throw new CustomError("un authorized user");
-  }
+  const userId = new mongoose.Types.ObjectId(req.user._id as string);
 
   if (isFollowingPosts === "true") {
-    // Get posts from followed users
     posts = await Post.find({ author: { $in: req.user.following || [] } })
       .sort({ createdAt: -1 })
-      .populate("author", "name profilePicture");
-  }
-
-  if (isMostLikedPosts === "true") {
-    // Get posts sorted by likes count
+      .populate("author", "name profilePicture")
+      .populate({
+        path: "originalPost",
+        populate: { path: "author", select: "name profilePicture" },
+      });
+  } else if (isMostLikedPosts === "true") {
     posts = await Post.find()
       .sort({ likes: -1, createdAt: -1 })
-      .populate("user", "name profilePicture");
-  }
-
-  if (isMostSharedPosts === "true") {
+      .populate("author", "name profilePicture")
+      .populate({
+        path: "originalPost",
+        populate: { path: "author", select: "name profilePicture" },
+      });
+  } else if (isMostSharedPosts === "true") {
     posts = await Post.aggregate([
       {
         $addFields: {
@@ -105,13 +107,62 @@ export const getPostsService = async (req: Request) => {
         },
       },
       { $unwind: "$author" },
+      {
+        $lookup: {
+          from: "posts",
+          localField: "originalPost",
+          foreignField: "_id",
+          as: "originalPost",
+        },
+      },
+      { $unwind: { path: "$originalPost", preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "originalPost.author",
+          foreignField: "_id",
+          as: "originalPost.author",
+        },
+      },
     ]);
   } else {
-    // Get all posts
     posts = await Post.find()
       .sort({ createdAt: -1 })
-      .populate("user", "name profilePicture");
+      .populate("author", "name profilePicture")
+      .populate({
+        path: "originalPost",
+        populate: { path: "author", select: "name profilePicture" },
+      });
   }
 
   return posts;
+};
+
+export const sharePostService = async (req: Request) => {
+  const { postId } = req.params;
+  const { shareThoughts } = req.body;
+
+  if (!req.user) throw new CustomError("Unauthorized", 401);
+
+  const userId = new mongoose.Types.ObjectId(req.user._id as string);
+
+  const originalPost = await Post.findById(postId);
+  if (!originalPost) throw new CustomError("Post not found", 404);
+
+  // Add current user to shares array if not already present
+  if (!originalPost.shares.includes(userId)) {
+    originalPost.shares.push(userId);
+    await originalPost.save({ validateBeforeSave: false });
+  }
+
+  // Create a new post for the user feed
+  const sharedPost = await Post.create({
+    author: userId,
+    content: originalPost.content,
+    media: originalPost.media,
+    originalPost: originalPost._id,
+    shareThoughts: shareThoughts || "",
+  });
+
+  return sharedPost;
 };

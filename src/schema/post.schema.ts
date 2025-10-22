@@ -8,6 +8,8 @@ export interface Post extends Document {
   shares: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
+  originalPost: Types.ObjectId;
+  shareThoughts: string;
 }
 
 const postSchema: Schema<Post> = new Schema(
@@ -23,6 +25,11 @@ const postSchema: Schema<Post> = new Schema(
     shares: [
       { type: mongoose.Schema.Types.ObjectId, ref: "User", default: [] },
     ],
+    shareThoughts: { type: String },
+    originalPost: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Post",
+    },
   },
   { timestamps: true }
 );

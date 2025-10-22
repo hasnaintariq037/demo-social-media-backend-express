@@ -6,6 +6,7 @@ import {
   createPostController,
   deletePostController,
   getPostsController,
+  sharePostController,
 } from "../controller/post.controller";
 import { createPostSchema } from "../validation/yup.validationSchema";
 
@@ -25,5 +26,7 @@ router
   .delete(authMiddlewqare, deletePostController);
 
 router.route("/get-posts").get(authMiddlewqare, getPostsController);
+
+router.route("/share-post/:postId").post(authMiddlewqare, sharePostController);
 
 export default router;

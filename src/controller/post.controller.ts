@@ -3,6 +3,7 @@ import {
   createPostService,
   deletePostService,
   getPostsService,
+  sharePostService,
 } from "../service/post.service";
 
 export const createPostController = async (
@@ -52,4 +53,15 @@ export const getPostsController = async (
   } catch (error) {
     next(error);
   }
+};
+
+export const sharePostController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const sharePost = await sharePostService(req);
+  res
+    .status(200)
+    .json({ succeeded: true, message: "Post shared successfully" });
 };
