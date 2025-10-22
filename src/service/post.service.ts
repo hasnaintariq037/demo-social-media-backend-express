@@ -70,71 +70,73 @@ export const getPostsService = async (req: Request) => {
 
   if (!req.user) throw new CustomError("Unauthorized", 401);
 
-  let posts;
+  const pipeline: any[] = [];
 
-  const userId = new mongoose.Types.ObjectId(req.user._id as string);
-
+  // Filter: posts from followed users
   if (isFollowingPosts === "true") {
-    posts = await Post.find({ author: { $in: req.user.following || [] } })
-      .sort({ createdAt: -1 })
-      .populate("author", "name profilePicture")
-      .populate({
-        path: "originalPost",
-        populate: { path: "author", select: "name profilePicture" },
-      });
-  } else if (isMostLikedPosts === "true") {
-    posts = await Post.find()
-      .sort({ likes: -1, createdAt: -1 })
-      .populate("author", "name profilePicture")
-      .populate({
-        path: "originalPost",
-        populate: { path: "author", select: "name profilePicture" },
-      });
-  } else if (isMostSharedPosts === "true") {
-    posts = await Post.aggregate([
-      {
-        $addFields: {
-          sharesCount: { $size: { $ifNull: ["$shares", []] } },
-        },
-      },
-      { $sort: { sharesCount: -1, createdAt: -1 } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "author",
-          foreignField: "_id",
-          as: "author",
-        },
-      },
-      { $unwind: "$author" },
-      {
-        $lookup: {
-          from: "posts",
-          localField: "originalPost",
-          foreignField: "_id",
-          as: "originalPost",
-        },
-      },
-      { $unwind: { path: "$originalPost", preserveNullAndEmptyArrays: true } },
-      {
-        $lookup: {
-          from: "users",
-          localField: "originalPost.author",
-          foreignField: "_id",
-          as: "originalPost.author",
-        },
-      },
-    ]);
-  } else {
-    posts = await Post.find()
-      .sort({ createdAt: -1 })
-      .populate("author", "name profilePicture")
-      .populate({
-        path: "originalPost",
-        populate: { path: "author", select: "name profilePicture" },
-      });
+    pipeline.push({
+      $match: { author: { $in: req.user.following || [] } },
+    });
   }
 
+  // Add counts for likes and shares
+  pipeline.push({
+    $addFields: {
+      likesCount: { $size: { $ifNull: ["$likes", []] } },
+      sharesCount: { $size: { $ifNull: ["$shares", []] } },
+    },
+  });
+
+  // Filter: only posts with at least one like
+  if (isMostLikedPosts === "true") {
+    pipeline.push({ $match: { likesCount: { $gt: 0 } } });
+    pipeline.push({ $sort: { likesCount: -1, createdAt: -1 } });
+  }
+
+  // Filter: only posts with at least one share
+  if (isMostSharedPosts === "true") {
+    pipeline.push({ $match: { sharesCount: { $gt: 0 } } });
+    pipeline.push({ $sort: { sharesCount: -1, createdAt: -1 } });
+  }
+
+  // If none of the above, default sorting
+  if (!isMostLikedPosts && !isMostSharedPosts) {
+    pipeline.push({ $sort: { createdAt: -1 } });
+  }
+
+  // Populate author
+  pipeline.push({
+    $lookup: {
+      from: "users",
+      localField: "author",
+      foreignField: "_id",
+      as: "author",
+    },
+  });
+  pipeline.push({ $unwind: "$author" });
+
+  // Populate original post and its author
+  pipeline.push({
+    $lookup: {
+      from: "posts",
+      localField: "originalPost",
+      foreignField: "_id",
+      as: "originalPost",
+    },
+  });
+  pipeline.push({
+    $unwind: { path: "$originalPost", preserveNullAndEmptyArrays: true },
+  });
+  pipeline.push({
+    $lookup: {
+      from: "users",
+      localField: "originalPost.author",
+      foreignField: "_id",
+      as: "originalPost.author",
+    },
+  });
+
+  const posts = await Post.aggregate(pipeline);
   return posts;
 };
 
