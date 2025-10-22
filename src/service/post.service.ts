@@ -66,7 +66,7 @@ export const deletePostService = async (req: Request) => {
 };
 
 export const getPostsService = async (req: Request) => {
-  const { isMostLikedPosts, isFollowingPosts } = req.query;
+  const { isMostLikedPosts, isFollowingPosts, isMostSharedPosts } = req.query;
 
   let posts;
 
@@ -79,11 +79,33 @@ export const getPostsService = async (req: Request) => {
     posts = await Post.find({ author: { $in: req.user.following || [] } })
       .sort({ createdAt: -1 })
       .populate("author", "name profilePicture");
-  } else if (isMostLikedPosts === "true") {
+  }
+
+  if (isMostLikedPosts === "true") {
     // Get posts sorted by likes count
     posts = await Post.find()
       .sort({ likes: -1, createdAt: -1 })
       .populate("user", "name profilePicture");
+  }
+
+  if (isMostSharedPosts === "true") {
+    posts = await Post.aggregate([
+      {
+        $addFields: {
+          sharesCount: { $size: { $ifNull: ["$shares", []] } },
+        },
+      },
+      { $sort: { sharesCount: -1, createdAt: -1 } },
+      {
+        $lookup: {
+          from: "users",
+          localField: "author",
+          foreignField: "_id",
+          as: "author",
+        },
+      },
+      { $unwind: "$author" },
+    ]);
   } else {
     // Get all posts
     posts = await Post.find()
