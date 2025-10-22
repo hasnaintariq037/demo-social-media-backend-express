@@ -4,6 +4,8 @@ import { AnyObjectSchema } from "yup";
 export const validate =
   (schema: AnyObjectSchema) =>
   async (req: Request, res: Response, next: NextFunction) => {
+    console.log(req.body);
+
     try {
       await schema.validate(req.body, { abortEarly: false });
       next();

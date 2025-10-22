@@ -19,3 +19,10 @@ export const loginSchema = yup.object().shape({
     .min(6, "Password must be at least 6 characters")
     .required("password is required"),
 });
+
+export const createPostSchema = yup.object().shape({
+  content: yup
+    .string()
+    .min(5, "content should be at least 5 characters long")
+    .required("content is required"),
+});
