@@ -5,6 +5,7 @@ import { upload } from "../middleware/multer.middleware";
 import {
   createPostController,
   deletePostController,
+  getPostsController,
 } from "../controller/post.controller";
 import { createPostSchema } from "../validation/yup.validationSchema";
 
@@ -22,5 +23,7 @@ router
 router
   .route("/delete-post/:postId")
   .delete(authMiddlewqare, deletePostController);
+
+router.route("/get-posts").get(authMiddlewqare, getPostsController);
 
 export default router;

@@ -1,5 +1,8 @@
 import { Request } from "express";
-import { uploadToCloudinary } from "../utils/cloudinary.util";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary.util";
 import Post from "../schema/post.schema";
 import mongoose from "mongoose";
 import { CustomError } from "../utils/customError.utils";
@@ -47,6 +50,46 @@ export const deletePostService = async (req: Request) => {
     throw new CustomError("Yuo are not owner of this post", 400);
   }
 
+  if (post.media && post.media.length > 0) {
+    const deletePromises = post.media.map((imgUrl) => {
+      // Extract publicId from URL (Cloudinary path)
+      const parts = imgUrl.split("/");
+      const fileName = parts[parts.length - 1];
+      const publicId = `posts/${fileName.split(".")[0]}`;
+      return deleteFromCloudinary(publicId);
+    });
+    await Promise.all(deletePromises);
+  }
+
   const deletePost = await Post.deleteOne({ _id: postId });
   return deletePost;
+};
+
+export const getPostsService = async (req: Request) => {
+  const { isMostLikedPosts, isFollowingPosts } = req.query;
+
+  let posts;
+
+  if (!req.user) {
+    throw new CustomError("un authorized user");
+  }
+
+  if (isFollowingPosts === "true") {
+    // Get posts from followed users
+    posts = await Post.find({ author: { $in: req.user.following || [] } })
+      .sort({ createdAt: -1 })
+      .populate("author", "name profilePicture");
+  } else if (isMostLikedPosts === "true") {
+    // Get posts sorted by likes count
+    posts = await Post.find()
+      .sort({ likes: -1, createdAt: -1 })
+      .populate("user", "name profilePicture");
+  } else {
+    // Get all posts
+    posts = await Post.find()
+      .sort({ createdAt: -1 })
+      .populate("user", "name profilePicture");
+  }
+
+  return posts;
 };

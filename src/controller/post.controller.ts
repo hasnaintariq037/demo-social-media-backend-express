@@ -1,5 +1,9 @@
 import { NextFunction, Request, Response } from "express";
-import { createPostService, deletePostService } from "../service/post.service";
+import {
+  createPostService,
+  deletePostService,
+  getPostsService,
+} from "../service/post.service";
 
 export const createPostController = async (
   req: Request,
@@ -28,6 +32,23 @@ export const deletePostController = async (
     res
       .status(200)
       .json({ succeeded: true, message: "Post deleted successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getPostsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const result = await getPostsService(req);
+    res.status(200).json({
+      succeeded: true,
+      message: "Posts fetched successfully",
+      data: result,
+    });
   } catch (error) {
     next(error);
   }
