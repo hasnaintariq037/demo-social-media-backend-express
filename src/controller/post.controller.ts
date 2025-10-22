@@ -4,6 +4,7 @@ import {
   deletePostService,
   getPostsService,
   sharePostService,
+  likePostService,
 } from "../service/post.service";
 
 export const createPostController = async (
@@ -60,8 +61,25 @@ export const sharePostController = async (
   res: Response,
   next: NextFunction
 ) => {
-  const sharePost = await sharePostService(req);
-  res
-    .status(200)
-    .json({ succeeded: true, message: "Post shared successfully" });
+  try {
+    const sharePost = await sharePostService(req);
+    res
+      .status(200)
+      .json({ succeeded: true, message: "Post shared successfully" });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const likePostController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  try {
+    const likePost = await likePostService(req);
+    res.status(200).json({ succeeded: true, message: ` You ${likePost} Post` });
+  } catch (error) {
+    next(error);
+  }
 };

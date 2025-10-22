@@ -166,3 +166,33 @@ export const sharePostService = async (req: Request) => {
 
   return sharedPost;
 };
+
+export const likePostService = async (req: Request) => {
+  const { postId } = req.params;
+
+  if (!req.user) throw new CustomError("Unauthorized", 401);
+
+  const userId = new mongoose.Types.ObjectId(req.user._id as string);
+
+  const post = await Post.findById(postId);
+  if (!post) throw new CustomError("Post not found", 404);
+
+  // Initialize likes array if undefined
+  post.likes = post.likes || [];
+
+  let message = "";
+
+  if (post.likes.some((id) => id.equals(userId))) {
+    // User already liked → unlike
+    post.likes = post.likes.filter((id) => !id.equals(userId));
+    message = "Unliked";
+  } else {
+    // Like the post
+    post.likes.push(userId);
+    message = "Liked";
+  }
+
+  await post.save({ validateBeforeSave: false });
+
+  return message;
+};

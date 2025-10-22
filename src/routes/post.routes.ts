@@ -7,6 +7,7 @@ import {
   deletePostController,
   getPostsController,
   sharePostController,
+  likePostController,
 } from "../controller/post.controller";
 import { createPostSchema } from "../validation/yup.validationSchema";
 
@@ -28,5 +29,7 @@ router
 router.route("/get-posts").get(authMiddlewqare, getPostsController);
 
 router.route("/share-post/:postId").post(authMiddlewqare, sharePostController);
+
+router.route("/like-post/:postId").post(authMiddlewqare, likePostController);
 
 export default router;
